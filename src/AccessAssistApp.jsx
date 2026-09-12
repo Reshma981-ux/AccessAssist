@@ -196,11 +196,32 @@ async function geocodePlace(query) {
 // Map click handler (used only while placing a new tagged pin)
 // ---------------------------------------------------------------------------
 function MapClickCatcher({ active, onPick }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    if (active) {
+      container.style.cursor = "crosshair";
+      container.classList.add("aa-map-placing");
+    } else {
+      container.style.cursor = "";
+      container.classList.remove("aa-map-placing");
+    }
+
+    return () => {
+      container.style.cursor = "";
+      container.classList.remove("aa-map-placing");
+    };
+  }, [active, map]);
+
   useMapEvents({
     click(e) {
-      if (active) onPick(e.latlng);
+      if (!active) return;
+      e.originalEvent?.preventDefault?.();
+      onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
     },
   });
+
   return null;
 }
 
@@ -301,7 +322,14 @@ export default function AccessAssistApp({ onSignOut }) {
   }, []);
 
   const persistPlace = async (place) => {
-    localStorage.setItem("accessassist_places", JSON.stringify(places.map((p) => p.id === place.id ? place : p)));
+    const cached = localStorage.getItem("accessassist_places");
+    let current = places;
+    if (cached) {
+      try { current = JSON.parse(cached); } catch {}
+    }
+    const exists = current.some((p) => p.id === place.id);
+    const nextPlaces = exists ? current.map((p) => p.id === place.id ? place : p) : [...current, place];
+    localStorage.setItem("accessassist_places", JSON.stringify(nextPlaces));
     if (!supabase) return;
     await supabase.from("places").upsert({
       id: place.id, name: place.name, lat: place.lat, lng: place.lng, features: place.features,
@@ -420,6 +448,11 @@ export default function AccessAssistApp({ onSignOut }) {
   };
 
   const confirmTaggingAndPlace = () => {
+    if (!draftFeatures.length) {
+      setPlacingPin(false);
+      return;
+    }
+
     setTaggingOpen(false);
     if (pendingLocation) {
       // Came from search — we already know exactly where to put the pin.
@@ -438,12 +471,18 @@ export default function AccessAssistApp({ onSignOut }) {
       setSelectedId(newPlace.id);
       setUnratedResult(null);
       setPendingLocation(null);
+      setPlacingPin(false);
     } else {
+      setPendingLocation(null);
+      setUnratedResult(null);
+      setSelectedId(null);
       setPlacingPin(true);
     }
   };
 
   const handleMapPick = (latlng) => {
+    if (!latlng || !Number.isFinite(latlng.lat) || !Number.isFinite(latlng.lng)) return;
+
     const newPlace = {
       id: `p${Date.now()}`,
       name: "New tagged place",
@@ -458,6 +497,8 @@ export default function AccessAssistApp({ onSignOut }) {
     updateContributor({ points: 20, tagged: 1 });
     setPlacingPin(false);
     setSelectedId(newPlace.id);
+    setTaggingOpen(false);
+    setPendingLocation(null);
   };
 
   // Free lookup for any place name (VIT-AP, a hostel, a street) via Nominatim.
@@ -573,7 +614,7 @@ export default function AccessAssistApp({ onSignOut }) {
         <div className="aa-header-controls" style={styles.headerControls}>
           <div style={styles.dbBadge}>{dbStatus === "connected" ? "● Database connected" : "● Demo database"}</div>
           <div className="aa-last-updated" title="Latest accessibility data update">🕒 <span>Last updated</span> <strong>{formatLastUpdated(lastUpdated)}</strong></div>
-          <button style={styles.toggle} onClick={() => setProfileOpen(true)}>👤 Accessibility Hero</button>
+          <button type="button" className="aa-hero-button" style={styles.toggle} onClick={() => setProfileOpen(true)} aria-haspopup="dialog" aria-label="Open Accessibility Hero">👤 Accessibility Hero</button>
           <ToggleButton label="Demo Fast-Forward" active={fastForward} onClick={() => setFastForward((v) => !v)} />
           <ToggleButton label="Voice-Guided Mode" active={voiceMode} onClick={() => setVoiceMode((v) => !v)} />
           <OfflineControl state={offlineState} progress={offlineProgress} onStart={startOfflineDownload} />
@@ -624,6 +665,7 @@ export default function AccessAssistApp({ onSignOut }) {
                       No accessibility score yet — you are the first to tag it
                     </div>
                     <button
+                      type="button"
                       style={{ ...styles.primaryButton, marginTop: 8, width: "100%", fontSize: 12, padding: "6px 10px" }}
                       onClick={() => startTagging(unratedResult)}
                     >
@@ -664,7 +706,7 @@ export default function AccessAssistApp({ onSignOut }) {
           </MapContainer>
 
           {placingPin && (
-            <div style={styles.placingBanner}>Tap anywhere on the map to drop the new pin</div>
+            <div style={styles.placingBanner}>📍 Placement mode: click anywhere on the map to add your new place</div>
           )}
 
           <form className="aa-search-bar" style={styles.searchBar} onSubmit={handleSearch}>
@@ -682,10 +724,6 @@ export default function AccessAssistApp({ onSignOut }) {
           {searchStatus === "error" && (
             <div style={styles.searchError}>Couldn't find that place — try a more specific name.</div>
           )}
-
-          <button style={styles.tagButton} onClick={() => startTagging(null)}>
-            + Tag a Place
-          </button>
         </div>
 
         <div className="aa-side-panel-shell">
@@ -703,6 +741,21 @@ export default function AccessAssistApp({ onSignOut }) {
         />
         </div>
       </div>
+
+      <button
+        type="button"
+        className="aa-tag-place-fixed"
+        onClick={() => {
+          setPlacingPin(false);
+          setPendingLocation(null);
+          setUnratedResult(null);
+          setDraftFeatures([]);
+          setTaggingOpen(true);
+        }}
+        aria-label="Tag a new place"
+      >
+        ＋ Tag a Place
+      </button>
 
       <button
         className="aa-emergency-button aa-emergency-button-fixed"
@@ -741,7 +794,15 @@ export default function AccessAssistApp({ onSignOut }) {
       </button>
 
       {profileOpen && <ProfileModal contributor={contributor} onClose={() => setProfileOpen(false)} />}
-      {emergencyOpen && <EmergencyModal places={places} onClose={() => setEmergencyOpen(false)} />}
+      {emergencyOpen && (
+        <EmergencyModal
+          places={places}
+          selectedPlace={selectedPlace}
+          searchResult={unratedResult}
+          requirement={requirement}
+          onClose={() => setEmergencyOpen(false)}
+        />
+      )}
 
       {barrierReportOpen && selectedPlace && (
         <BarrierReportModal
@@ -943,24 +1004,106 @@ function SidePanel({ place, virtualNow, requirement, onReportBarrier, barrierIss
 
 function ProfileModal({ contributor, onClose }) {
   const level = contributor.points >= 100 ? 3 : contributor.points >= 50 ? 2 : 1;
-  const badge = contributor.points >= 100 ? "🥇 Accessibility Hero" : contributor.points >= 50 ? "🥈 Accessibility Advocate" : "🥉 Helper";
-  return <div style={styles.modalOverlay}><div style={styles.modal}>
-    <h3 style={{ margin: 0 }}>👤 Accessibility Hero</h3><div style={styles.heroLevel}>Level {level} · ⭐ {contributor.points} points</div>
-    <div style={styles.profileGrid}><div>📍<b>{contributor.tagged}</b><small> places tagged</small></div><div>⚠️<b>{contributor.barriers}</b><small> barriers reported</small></div><div>✓<b>{contributor.confirmed}</b><small> reports confirmed</small></div></div>
-    <div style={styles.badgeCard}>{badge}</div><button style={{...styles.primaryButton,width:"100%"}} onClick={onClose}>Close</button>
-  </div></div>;
+  const badge = contributor.points >= 100
+    ? "🥇 Accessibility Hero"
+    : contributor.points >= 50
+      ? "🥈 Accessibility Advocate"
+      : "🥉 Helper";
+
+  useEffect(() => {
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = oldOverflow;
+    };
+  }, []);
+
+  return (
+    <div
+      className="aa-hero-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="aa-hero-title"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="aa-hero-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="aa-hero-modal-header">
+          <div>
+            <div className="aa-hero-kicker">YOUR CONTRIBUTION</div>
+            <h3 id="aa-hero-title">👤 Accessibility Hero</h3>
+            <div className="aa-hero-level">Level {level} · ⭐ {contributor.points} points</div>
+          </div>
+          <button type="button" className="aa-hero-x" onClick={onClose} aria-label="Close Accessibility Hero">✕</button>
+        </div>
+
+        <div className="aa-hero-stats">
+          <div className="aa-hero-stat">
+            <span>📍</span>
+            <b>{contributor.tagged}</b>
+            <small>places tagged</small>
+          </div>
+          <div className="aa-hero-stat">
+            <span>⚠️</span>
+            <b>{contributor.barriers}</b>
+            <small>barriers reported</small>
+          </div>
+          <div className="aa-hero-stat">
+            <span>✓</span>
+            <b>{contributor.confirmed}</b>
+            <small>reports confirmed</small>
+          </div>
+        </div>
+
+        <div className="aa-hero-badge">{badge}</div>
+
+        <button type="button" className="aa-hero-close" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function EmergencyModal({ places, onClose }) {
-  const items = places.slice(0, 3).map((p, i) => ({
-    name: p.name,
-    distance: [300, 450, 600][i],
-    type: [
-      "🚻 Accessible Restroom",
-      "♿ Step-Free Entrance",
-      "🅿️ Accessible Parking"
-    ][i]
-  }));
+function EmergencyModal({ places, selectedPlace, searchResult, requirement, onClose }) {
+  const target = selectedPlace || (searchResult ? { name: searchResult.name, lat: searchResult.lat, lng: searchResult.lng } : null);
+  const MAX_DISTANCE_METERS = 2000;
+  const req = REQUIREMENTS.find((r) => r.id === requirement) || REQUIREMENTS[0];
+
+  const items = useMemo(() => {
+    if (!target || !Number.isFinite(Number(target.lat)) || !Number.isFinite(Number(target.lng))) return [];
+
+    return places
+      .map((place) => {
+        const distance = distanceMeters(
+          Number(target.lat),
+          Number(target.lng),
+          Number(place.lat),
+          Number(place.lng)
+        );
+        const relevantFeatures = (place.features || []).filter((id) => (req.weights[id] || 0) > 0);
+        return {
+          ...place,
+          distance,
+          relevantFeatures,
+          score: personalizedScore(place, req.id),
+        };
+      })
+      .filter(
+        (place) =>
+          Number.isFinite(place.distance) &&
+          place.distance > 10 &&
+          place.distance <= MAX_DISTANCE_METERS &&
+          place.relevantFeatures.length > 0
+      )
+      .sort((a, b) => a.distance - b.distance);
+  }, [places, target, req]);
+
+  const formatDistance = (meters) => {
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
 
   return (
     <div className="aa-emergency-overlay" onClick={onClose}>
@@ -968,24 +1111,61 @@ function EmergencyModal({ places, onClose }) {
         <div className="aa-emergency-header">
           <div className="aa-emergency-icon">🚨</div>
           <div className="aa-emergency-title-wrap">
-            <h2>Accessibility Now</h2>
-            <p>Nearby accessible facilities</p>
+            <h2>Accessibility Nearby</h2>
+            <p>
+              {target
+                ? `${req.icon} ${req.label} · within 2 km of ${target.name}`
+                : `${req.icon} ${req.label} · search a place first`}
+            </p>
           </div>
         </div>
 
-        <div className="aa-emergency-list">
-          {items.map((x) => (
-            <div key={x.type} className="aa-emergency-item">
-              <div className="aa-emergency-item-text">
-                <div className="aa-emergency-type">{x.type}</div>
-                <div className="aa-emergency-place">{x.name}</div>
-              </div>
-              <div className="aa-emergency-distance">{x.distance} m</div>
-            </div>
-          ))}
+        <div className="aa-emergency-context">
+          {target
+            ? `Showing tagged places with relevant ${req.label.toLowerCase()} facilities within a 2 km radius.`
+            : "Search for a location or select a map pin to find nearby accessible places."}
         </div>
 
-        <button className="aa-emergency-close" onClick={onClose}>Close</button>
+        {items.length === 0 ? (
+          <div className="aa-emergency-empty">
+            <div className="aa-emergency-empty-icon">📍</div>
+            <strong>
+              {target
+                ? `No tagged ${req.label.toLowerCase()} facilities within 2 km.`
+                : "No location selected yet."}
+            </strong>
+            <div>
+              {target
+                ? "Try another place or tag accessible facilities near this location."
+                : "Search for a place first, then open Accessibility Nearby."}
+            </div>
+          </div>
+        ) : (
+          <div className="aa-emergency-list">
+            {items.map((place) => (
+              <div key={place.id} className="aa-emergency-item">
+                <div className="aa-emergency-item-text">
+                  <div className="aa-emergency-type">
+                    {place.relevantFeatures
+                      .map((id) => {
+                        const feature = FEATURE_LIBRARY.find((f) => f.id === id);
+                        return feature ? feature.label : null;
+                      })
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                  <div className="aa-emergency-place">{place.name}</div>
+                  <div className="aa-emergency-meta">
+                    Score {place.score}/100{place.verified ? " · ✓ Verified" : " · Not verified"}
+                  </div>
+                </div>
+                <div className="aa-emergency-distance">{formatDistance(place.distance)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button type="button" className="aa-emergency-close" onClick={onClose}>Close</button>
       </div>
     </div>
   );
@@ -1080,8 +1260,8 @@ function BarrierReportModal({ place, selectedIssues, onToggle, onClose, onDone }
 function TaggingModal({ draftFeatures, draftScore, onToggle, onCancel, onConfirm }) {
   const color = scoreColor(draftScore);
   return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modal}>
+    <div className="aa-tagging-overlay" style={{ ...styles.modalOverlay, zIndex: 1000000, pointerEvents: "auto" }}>
+      <div className="aa-tagging-modal" style={{ ...styles.modal, pointerEvents: "auto" }} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ margin: 0, color: COLORS.text }}>Tag a place</h3>
         <p style={{ color: COLORS.textDim, fontSize: 13, marginTop: 4 }}>
           Select the features present at this location.

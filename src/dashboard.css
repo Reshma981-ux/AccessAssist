@@ -2421,6 +2421,96 @@ body {
 
 
 /* =========================================================
+   ACCESSIBILITY HERO — RELIABLE CLICK + VISIBLE MODAL
+   ========================================================= */
+
+#root .aa-dashboard button.aa-hero-button {
+  position: relative !important;
+  z-index: 50 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+#root .aa-dashboard .aa-hero-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482500 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  overflow: auto !important;
+
+  background: rgba(5, 4, 12, .78) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+
+  animation: aaHeroOverlayIn .2s ease-out both !important;
+}
+
+#root .aa-dashboard .aa-hero-modal {
+  position: relative !important;
+  z-index: 2147482501 !important;
+
+  width: min(420px, calc(100vw - 30px)) !important;
+  max-height: min(680px, calc(100vh - 40px)) !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding: 22px !important;
+  box-sizing: border-box !important;
+  border-radius: 18px !important;
+
+  background: linear-gradient(
+    180deg,
+    rgba(31,25,50,.99),
+    rgba(18,14,31,.99)
+  ) !important;
+
+  border: 1px solid rgba(139,107,255,.5) !important;
+
+  box-shadow:
+    0 28px 90px rgba(0,0,0,.62),
+    0 0 48px rgba(139,92,246,.15) !important;
+
+  color: #f1edfb !important;
+  outline: none !important;
+
+  animation: aaHeroModalIn .25s cubic-bezier(.16,1,.3,1) both !important;
+}
+
+#root .aa-dashboard .aa-hero-modal h3 {
+  color: #f7f3ff !important;
+  margin: 0 !important;
+}
+
+#root .aa-dashboard .aa-hero-close-button {
+  position: relative !important;
+  z-index: 10 !important;
+  cursor: pointer !important;
+}
+
+@keyframes aaHeroOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes aaHeroModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
    ACCESSASSIST — BARRIER REPORT: CLEAR, MODAL, ACCESSIBLE UX
    ========================================================= */
 
@@ -2773,3 +2863,451 @@ body {
     transition: none !important;
   }
 }
+
+
+/* =========================================================
+   FINAL INTERACTION FIX — TAG A PLACE
+   The map button and tagging dialog are isolated from the
+   animated background and other overlays.
+   ========================================================= */
+
+#root .aa-dashboard .aa-map-wrap {
+  position: relative !important;
+  isolation: isolate !important;
+  pointer-events: auto !important;
+}
+
+#root .aa-dashboard .aa-map-wrap > .aa-tag-place-button,
+#root .aa-dashboard .aa-map-wrap > button.aa-tag-place-button {
+  position: absolute !important;
+  left: 20px !important;
+  bottom: 20px !important;
+  z-index: 5000 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+}
+
+#root .aa-dashboard .aa-live-shine,
+#root .aa-dashboard .aa-dynamic-background {
+  pointer-events: none !important;
+}
+
+#root .aa-dashboard .aa-placing-banner {
+  pointer-events: none !important;
+  z-index: 6000 !important;
+}
+
+/* ---------- Tagging dialog ---------- */
+
+#root .aa-dashboard .aa-tagging-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483600 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 18px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  background:
+    radial-gradient(circle at 50% 12%, rgba(103,232,249,.10), transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(139,92,246,.16), transparent 35%),
+    rgba(5,4,13,.82) !important;
+
+  backdrop-filter: blur(10px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(125%) !important;
+}
+
+#root .aa-dashboard .aa-tagging-modal {
+  position: relative !important;
+  z-index: 2147483601 !important;
+  width: min(540px, calc(100vw - 30px)) !important;
+  max-height: calc(100vh - 36px) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  box-sizing: border-box !important;
+  padding: 22px !important;
+
+  border-radius: 20px !important;
+  border: 1px solid rgba(139,107,255,.48) !important;
+
+  background: linear-gradient(
+    180deg,
+    rgba(31,25,50,.99),
+    rgba(17,13,29,.99)
+  ) !important;
+
+  box-shadow:
+    0 30px 100px rgba(0,0,0,.62),
+    0 0 50px rgba(139,92,246,.15) !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  outline: none !important;
+
+  color: #f1edfb !important;
+}
+
+#root .aa-dashboard .aa-tagging-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 14px !important;
+}
+
+#root .aa-dashboard .aa-tagging-kicker {
+  color: #67e8f9 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1.3px !important;
+  margin-bottom: 5px !important;
+}
+
+#root .aa-dashboard #aa-tagging-title {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 23px !important;
+}
+
+#root .aa-dashboard .aa-tagging-header p {
+  margin: 7px 0 0 !important;
+  color: #a79cc7 !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+#root .aa-dashboard .aa-tagging-close {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 auto !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(167,139,250,.25) !important;
+  background: rgba(139,92,246,.08) !important;
+  color: #ded5ef !important;
+  cursor: pointer !important;
+  font-size: 17px !important;
+}
+
+#root .aa-dashboard .aa-tagging-score {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-top: 18px !important;
+  padding: 12px !important;
+  border-radius: 13px !important;
+  background: rgba(139,92,246,.07) !important;
+  border: 1px solid rgba(139,107,255,.18) !important;
+}
+
+#root .aa-dashboard .aa-tagging-score-circle {
+  width: 52px !important;
+  height: 52px !important;
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  border: 3px solid !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 25px rgba(139,92,246,.12) !important;
+}
+
+#root .aa-dashboard .aa-tagging-score strong {
+  display: block !important;
+  color: #eee8f8 !important;
+  font-size: 12px !important;
+}
+
+#root .aa-dashboard .aa-tagging-score span {
+  display: block !important;
+  margin-top: 3px !important;
+  color: #968caf !important;
+  font-size: 10px !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature-list {
+  display: grid !important;
+  gap: 8px !important;
+  margin-top: 14px !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature {
+  display: grid !important;
+  grid-template-columns: 20px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 48px !important;
+  padding: 9px 11px !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(51,41,79,.96) !important;
+  background: rgba(42,34,68,.48) !important;
+  cursor: pointer !important;
+  transition: .16s ease !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature:hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(139,107,255,.45) !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature.is-selected {
+  background: linear-gradient(135deg, rgba(139,92,246,.17), rgba(103,232,249,.06)) !important;
+  border-color: rgba(139,107,255,.68) !important;
+  box-shadow: 0 0 0 1px rgba(139,107,255,.05) inset !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature input {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+#root .aa-dashboard .aa-tagging-check {
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(167,139,250,.3) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  background: rgba(10,8,18,.45) !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature.is-selected .aa-tagging-check {
+  background: #8b6bff !important;
+  border-color: #8b6bff !important;
+  box-shadow: 0 0 12px rgba(139,107,255,.25) !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature-name {
+  color: #eee8f8 !important;
+  font-size: 12px !important;
+}
+
+#root .aa-dashboard .aa-tagging-feature-weight {
+  color: #8f84aa !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+#root .aa-dashboard .aa-tagging-note {
+  margin-top: 12px !important;
+  padding: 10px !important;
+  border-radius: 10px !important;
+  color: #9d93b4 !important;
+  background: rgba(255,255,255,.025) !important;
+  border: 1px solid rgba(255,255,255,.045) !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+}
+
+#root .aa-dashboard .aa-tagging-note strong {
+  color: #ddd4ef !important;
+}
+
+#root .aa-dashboard .aa-tagging-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 9px !important;
+  margin-top: 15px !important;
+}
+
+#root .aa-dashboard .aa-tagging-cancel,
+#root .aa-dashboard .aa-tagging-place {
+  padding: 10px 15px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+#root .aa-dashboard .aa-tagging-cancel {
+  border: 1px solid rgba(167,139,250,.24) !important;
+  background: transparent !important;
+  color: #c0b5d6 !important;
+}
+
+#root .aa-dashboard .aa-tagging-place {
+  border: 0 !important;
+  background: linear-gradient(135deg, #8b6bff, #6d49ef) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 22px rgba(109,73,239,.24) !important;
+}
+
+#root .aa-dashboard .aa-tagging-place:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 28px rgba(109,73,239,.34) !important;
+}
+
+@media (max-width: 700px) {
+  #root .aa-dashboard .aa-tagging-overlay {
+    padding: 10px !important;
+  }
+
+  #root .aa-dashboard .aa-tagging-modal {
+    width: 100% !important;
+    max-height: calc(100vh - 20px) !important;
+    padding: 17px !important;
+  }
+
+  #root .aa-dashboard .aa-tagging-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: rgba(17,13,29,.97) !important;
+    padding-top: 10px !important;
+  }
+}
+
+
+/* =========================================================
+   DYNAMIC ACCESSIBILITY NOW — DATA-DRIVEN RESULTS
+   ========================================================= */
+
+#root .aa-dashboard .aa-emergency-context {
+  display: grid !important;
+  gap: 3px !important;
+  margin: 14px 0 10px !important;
+  padding: 10px 11px !important;
+  border-radius: 10px !important;
+  background: rgba(103,232,249,.055) !important;
+  border: 1px solid rgba(103,232,249,.16) !important;
+}
+
+#root .aa-dashboard .aa-emergency-context strong {
+  color: #e9e3f7 !important;
+  font-size: 11px !important;
+}
+
+#root .aa-dashboard .aa-emergency-context span {
+  color: #9f95b9 !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+}
+
+#root .aa-dashboard .aa-emergency-meta {
+  margin-top: 4px !important;
+  color: #8f86aa !important;
+  font-size: 9px !important;
+}
+
+#root .aa-dashboard .aa-emergency-empty {
+  display: grid !important;
+  place-items: center !important;
+  gap: 7px !important;
+  padding: 28px 18px !important;
+  text-align: center !important;
+  color: #aaa0c0 !important;
+}
+
+#root .aa-dashboard .aa-emergency-empty-icon {
+  font-size: 30px !important;
+  animation: aaEmergencyEmptyPulse 2.4s ease-in-out infinite !important;
+}
+
+#root .aa-dashboard .aa-emergency-empty strong {
+  color: #eee8f8 !important;
+  font-size: 12px !important;
+}
+
+#root .aa-dashboard .aa-emergency-empty span {
+  max-width: 300px !important;
+  font-size: 10px !important;
+  line-height: 1.5 !important;
+  color: #8f86aa !important;
+}
+
+@keyframes aaEmergencyEmptyPulse {
+  0%,100% { transform: scale(.95); opacity: .6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+
+/* Accessibility Hero modal - isolated final styling */
+#root .aa-dashboard .aa-hero-button {
+  position: relative !important;
+  z-index: 5000 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+#root .aa-dashboard .aa-hero-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  overflow: auto !important;
+  background: rgba(4,3,11,.8) !important;
+  backdrop-filter: blur(10px) !important;
+}
+#root .aa-dashboard .aa-hero-modal {
+  width: min(430px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 40px) !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+  padding: 22px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(180deg,#241d3c,#161127) !important;
+  border: 1px solid rgba(139,107,255,.52) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.65),0 0 45px rgba(139,92,246,.18) !important;
+  color: #f1edfb !important;
+}
+#root .aa-dashboard .aa-hero-modal-header {display:flex !important;align-items:flex-start !important;justify-content:space-between !important;gap:14px !important}
+#root .aa-dashboard .aa-hero-kicker {color:#67e8f9 !important;font-size:9px !important;font-weight:900 !important;letter-spacing:1.3px !important;margin-bottom:5px !important}
+#root .aa-dashboard .aa-hero-modal h3 {margin:0 !important;color:#f7f3ff !important;font-size:21px !important}
+#root .aa-dashboard .aa-hero-level {margin-top:7px !important;color:#a78bfa !important;font-size:12px !important;font-weight:800 !important}
+#root .aa-dashboard .aa-hero-x {width:36px !important;height:36px !important;border-radius:10px !important;border:1px solid rgba(167,139,250,.26) !important;background:rgba(139,92,246,.09) !important;color:#ddd5f3 !important;cursor:pointer !important}
+#root .aa-dashboard .aa-hero-stats {display:grid !important;grid-template-columns:repeat(3,1fr) !important;gap:8px !important;margin-top:18px !important}
+#root .aa-dashboard .aa-hero-stat {padding:11px 7px !important;border-radius:12px !important;text-align:center !important;background:rgba(139,92,246,.08) !important;border:1px solid rgba(139,107,255,.18) !important}
+#root .aa-dashboard .aa-hero-stat span,#root .aa-dashboard .aa-hero-stat b,#root .aa-dashboard .aa-hero-stat small {display:block !important}
+#root .aa-dashboard .aa-hero-stat b {margin-top:4px !important;font-size:20px !important;color:#f7f3ff !important}
+#root .aa-dashboard .aa-hero-stat small {margin-top:3px !important;color:#9f95ba !important;font-size:9px !important}
+#root .aa-dashboard .aa-hero-badge {margin-top:16px !important;padding:14px !important;text-align:center !important;border-radius:13px !important;border:1px solid rgba(61,220,151,.26) !important;background:rgba(61,220,151,.08) !important;font-weight:900 !important}
+#root .aa-dashboard .aa-hero-close {display:block !important;width:100% !important;margin-top:14px !important;padding:11px 14px !important;border:0 !important;border-radius:10px !important;background:#8b6bff !important;color:#fff !important;font-weight:800 !important;cursor:pointer !important}
+
+/* Manual Tag a Place reliability fix */
+#root .aa-dashboard .aa-map-wrap .leaflet-container.aa-map-placing {
+  cursor: crosshair !important;
+}
+#root .aa-dashboard .aa-map-wrap .aa-placing-banner {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+
+/* FINAL TAG A PLACE BUTTON FIX */
+#root .aa-dashboard .aa-tag-place-fixed {
+  position: fixed !important;
+  left: 24px !important;
+  bottom: 24px !important;
+  z-index: 1000001 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  border-radius: 14px !important;
+  padding: 13px 20px !important;
+  min-height: 48px !important;
+  background: #8b6bff !important;
+  color: #100c1c !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35) !important;
+}
+#root .aa-dashboard .aa-tag-place-fixed:hover { transform: translateY(-2px) !important; }
+#root .aa-dashboard .aa-tagging-overlay { position: fixed !important; inset: 0 !important; z-index: 1000000 !important; pointer-events: auto !important; }
+#root .aa-dashboard .aa-tagging-modal { position: relative !important; z-index: 1000001 !important; pointer-events: auto !important; }
+@media (max-width:700px){ #root .aa-dashboard .aa-tag-place-fixed{left:14px !important;bottom:14px !important;} }
