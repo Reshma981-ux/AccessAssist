@@ -47,16 +47,6 @@ const FEATURE_LIBRARY = [
   { id: "parking", label: "Accessible parking", weight: 10 },
 ];
 
-const BARRIER_LIBRARY = [
-  { id: "entrance", label: "Entrance is blocked / no step-free access", icon: "🚪" },
-  { id: "doorway", label: "Doorway is too narrow", icon: "↔️" },
-  { id: "elevator", label: "Elevator is unavailable / broken", icon: "🛗" },
-  { id: "restroom", label: "Accessible restroom is unavailable", icon: "🚻" },
-  { id: "parking", label: "Accessible parking is blocked", icon: "🅿️" },
-  { id: "tactile", label: "Tactile path is blocked / damaged", icon: "🦯" },
-  { id: "surface", label: "Uneven or unsafe surface", icon: "⚠️" },
-];
-
 const VIJAYAWADA_CENTER = [16.5062, 80.648];
 
 const REQUIREMENTS = [
@@ -96,12 +86,12 @@ function formatVerified(date) {
 
 
 const SEED_PLACES = [
-  { id: "p1", name: "Kanaka Durga Temple Approach", lat: 16.5193, lng: 80.6132, features: ["ramp", "elevator", "restroom"], verified: true, verifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "p2", name: "Benz Circle Metro Stop", lat: 16.5062, lng: 80.648, features: ["ramp", "tactile"], verified: true, verifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "p3", name: "PVP Square Mall", lat: 16.5, lng: 80.6425, features: ["ramp", "doorway", "restroom", "elevator", "parking"], verified: true, verifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  { id: "p4", name: "Governorpet Bus Stand", lat: 16.5158, lng: 80.6203, features: ["parking"], verified: false, verifiedAt: null, updatedAt: new Date().toISOString() },
-  { id: "p5", name: "SRR & CVR College Gate", lat: 16.5348, lng: 80.6089, features: ["doorway"], verified: false, verifiedAt: null, updatedAt: new Date().toISOString() },
-  { id: "p6", name: "One Town Market Lane", lat: 16.5104, lng: 80.6151, features: [], verified: false, verifiedAt: null, updatedAt: new Date().toISOString() },
+  { id: "p1", name: "Kanaka Durga Temple Approach", lat: 16.5193, lng: 80.6132, features: ["ramp", "elevator", "restroom"], verified: true, verifiedAt: new Date().toISOString() },
+  { id: "p2", name: "Benz Circle Metro Stop", lat: 16.5062, lng: 80.648, features: ["ramp", "tactile"], verified: true, verifiedAt: new Date().toISOString() },
+  { id: "p3", name: "PVP Square Mall", lat: 16.5, lng: 80.6425, features: ["ramp", "doorway", "restroom", "elevator", "parking"], verified: true, verifiedAt: new Date().toISOString() },
+  { id: "p4", name: "Governorpet Bus Stand", lat: 16.5158, lng: 80.6203, features: ["parking"], verified: false, verifiedAt: null },
+  { id: "p5", name: "SRR & CVR College Gate", lat: 16.5348, lng: 80.6089, features: ["doorway"], verified: false, verifiedAt: null },
+  { id: "p6", name: "One Town Market Lane", lat: 16.5104, lng: 80.6151, features: [], verified: false, verifiedAt: null },
 ];
 
 const BARRIER_DURATION_MS = 24 * 60 * 60 * 1000; // 24h
@@ -229,8 +219,6 @@ export default function AccessAssistApp({ onSignOut }) {
   const [draftFeatures, setDraftFeatures] = useState([]);
   const [placingPin, setPlacingPin] = useState(false);
   const [pendingLocation, setPendingLocation] = useState(null); // {name, lat, lng} — set when tagging comes from search
-  const [barrierReportOpen, setBarrierReportOpen] = useState(false);
-  const [localBarrierIssues, setLocalBarrierIssues] = useState({});
 
   const [searchText, setSearchText] = useState("");
   const [searchStatus, setSearchStatus] = useState("idle"); // idle | loading | error
@@ -269,16 +257,6 @@ export default function AccessAssistApp({ onSignOut }) {
 
   const selectedPlace = useMemo(() => places.find((p) => p.id === selectedId) || null, [places, selectedId]);
 
-  const lastUpdated = useMemo(() => {
-    const timestamps = places.map((p) => p.updatedAt).filter(Boolean).map((d) => new Date(d).getTime()).filter(Number.isFinite);
-    return timestamps.length ? new Date(Math.max(...timestamps)) : new Date();
-  }, [places]);
-
-  const formatLastUpdated = (date) => {
-    if (!date) return "Not available";
-    return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date);
-  };
-
   useEffect(() => {
     const cached = localStorage.getItem("accessassist_places");
     if (cached) { try { setPlaces(JSON.parse(cached)); } catch {} }
@@ -288,9 +266,9 @@ export default function AccessAssistApp({ onSignOut }) {
         const { data, error } = await supabase.from("places").select("*").order("created_at", { ascending: true });
         if (error) throw error;
         if (data?.length) {
-          setPlaces(data.map((p) => ({ ...p, features: p.features || [], barrier: p.barrier || null, verifiedAt: p.verified_at || null, requestCount: p.request_count || 0, updatedAt: p.updated_at || p.verified_at || null })));
+          setPlaces(data.map((p) => ({ ...p, features: p.features || [], barrier: p.barrier || null, verifiedAt: p.verified_at || null, requestCount: p.request_count || 0 })));
         } else {
-          for (const p of SEED_PLACES) await supabase.from("places").upsert({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, features: p.features, verified: !!p.verified, verified_at: p.verifiedAt || null, barrier: p.barrier || null, request_count: 0, updated_at: p.updatedAt || new Date().toISOString() });
+          for (const p of SEED_PLACES) await supabase.from("places").upsert({ id: p.id, name: p.name, lat: p.lat, lng: p.lng, features: p.features, verified: !!p.verified, verified_at: p.verifiedAt || null, barrier: p.barrier || null, request_count: 0 });
         }
         setDbStatus("connected");
         const { data: c } = await supabase.from("contributors").select("*").eq("device_id", DEVICE_ID).maybeSingle();
@@ -306,7 +284,7 @@ export default function AccessAssistApp({ onSignOut }) {
     await supabase.from("places").upsert({
       id: place.id, name: place.name, lat: place.lat, lng: place.lng, features: place.features,
       verified: !!place.verified, verified_at: place.verifiedAt || null, barrier: place.barrier || null,
-      request_count: place.requestCount || 0, updated_at: place.updatedAt || new Date().toISOString()
+      request_count: place.requestCount || 0
     });
   };
 
@@ -334,79 +312,48 @@ export default function AccessAssistApp({ onSignOut }) {
     speak(describePlaceForVoice(selectedPlace, score));
   };
 
-  // Barrier reports are deliberately separate from verified accessibility data.
-  // Selecting/fixing a barrier here changes only this website session, not the
-  // place's accessibility features and not the Supabase database.
-  const getBarrierIssuesForPlace = (place) => {
-    if (!place) return [];
-    if (Object.prototype.hasOwnProperty.call(localBarrierIssues, place.id)) {
-      return localBarrierIssues[place.id];
-    }
-    return place.barrier?.issues?.length ? place.barrier.issues : [];
-  };
-
-  const openBarrierReport = () => {
+  const handleReportBarrier = () => {
     if (!selectedPlace) return;
-    setLocalBarrierIssues((prev) => ({
-      ...prev,
-      [selectedPlace.id]: prev[selectedPlace.id] ?? (selectedPlace.barrier?.issues || []),
-    }));
-    setBarrierReportOpen(true);
+    const updated = { ...selectedPlace, barrier: { reportedAt: virtualNow, expiresAt: virtualNow + BARRIER_DURATION_MS, confirmations: 0, fixed: 0 }, verifiedAt: new Date().toISOString() };
+    setPlaces((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+    persistPlace(updated);
+    updateContributor({ points: 10, barriers: 1 });
   };
 
-  const toggleBarrierIssue = (issueId) => {
+  // Anyone visiting the pin can mark a barrier fixed once it's actually resolved —
+  // the 24h countdown is just the safety-net fallback if nobody does this.
+  const handleResolveBarrier = () => {
     if (!selectedPlace) return;
-    const current = getBarrierIssuesForPlace(selectedPlace);
-    const next = current.includes(issueId)
-      ? current.filter((id) => id !== issueId)
-      : [...current, issueId];
-
-    setLocalBarrierIssues((prev) => ({
-      ...prev,
-      [selectedPlace.id]: next,
-    }));
-  };
-
-  const fixOneBarrierIssue = (issueId) => {
-    if (!selectedPlace) return;
-    const current = getBarrierIssuesForPlace(selectedPlace);
-    setLocalBarrierIssues((prev) => ({
-      ...prev,
-      [selectedPlace.id]: current.filter((id) => id !== issueId),
-    }));
-  };
-
-  const clearAllLocalBarrierIssues = () => {
-    if (!selectedPlace) return;
-    setLocalBarrierIssues((prev) => ({
-      ...prev,
-      [selectedPlace.id]: [],
-    }));
-  };
-
-  const confirmBarrier = (stillPresent) => {
-    if (!selectedPlace) return;
-    if (!stillPresent) {
-      clearAllLocalBarrierIssues();
-      return;
-    }
-  };
-
-  const handleVerifyPlace = () => {
-    if (!selectedPlace || selectedPlace.verified) return;
-    const updated = { ...selectedPlace, verified: true, verifiedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const updated = { ...selectedPlace, barrier: null, verified: true, verifiedAt: new Date().toISOString() };
     setPlaces((prev) => prev.map((p) => p.id === updated.id ? updated : p));
     persistPlace(updated);
     updateContributor({ points: 5, confirmed: 1 });
   };
 
+  const handleVerifyPlace = () => {
+    if (!selectedPlace || selectedPlace.verified) return;
+    const updated = { ...selectedPlace, verified: true, verifiedAt: new Date().toISOString() };
+    setPlaces((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+    persistPlace(updated);
+    updateContributor({ points: 5, confirmed: 1 });
+  };
+
+  const confirmBarrier = (stillPresent) => {
+    if (!selectedPlace?.barrier) return;
+    if (!stillPresent) { handleResolveBarrier(); return; }
+    const barrier = { ...selectedPlace.barrier, confirmations: (selectedPlace.barrier.confirmations || 0) + 1 };
+    const updated = { ...selectedPlace, barrier, verifiedAt: new Date().toISOString() };
+    setPlaces((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+    persistPlace(updated);
+    updateContributor({ points: 3, confirmed: 1 });
+  };
 
   const requestImprovement = async () => {
     if (!selectedPlace) return;
-    const updated = { ...selectedPlace, requestCount: (selectedPlace.requestCount || 0) + 1, updatedAt: new Date().toISOString() };
+    const updated = { ...selectedPlace, requestCount: (selectedPlace.requestCount || 0) + 1 };
     setPlaces((prev) => prev.map((p) => p.id === updated.id ? updated : p));
     setBusinessRequest(true);
-    if (supabase) await supabase.from("places").upsert({ id: updated.id, name: updated.name, lat: updated.lat, lng: updated.lng, features: updated.features, verified: !!updated.verified, verified_at: updated.verifiedAt || null, barrier: updated.barrier || null, request_count: updated.requestCount || 0, updated_at: updated.updatedAt || new Date().toISOString() });
+    if (supabase) await supabase.from("places").upsert({ id: updated.id, name: updated.name, lat: updated.lat, lng: updated.lng, features: updated.features, verified: !!updated.verified, verified_at: updated.verifiedAt || null, barrier: updated.barrier || null, request_count: updated.requestCount || 0 });
   };
 
   const toggleDraftFeature = (id) => {
@@ -430,7 +377,7 @@ export default function AccessAssistApp({ onSignOut }) {
         lng: pendingLocation.lng,
         features: draftFeatures,
         verified: false,
-        barrier: null, verifiedAt: null, requestCount: 0, updatedAt: new Date().toISOString(),
+        barrier: null, verifiedAt: null, requestCount: 0,
       };
       setPlaces((prev) => [...prev, newPlace]);
       persistPlace(newPlace);
@@ -451,7 +398,7 @@ export default function AccessAssistApp({ onSignOut }) {
       lng: latlng.lng,
       features: draftFeatures,
       verified: false,
-      barrier: null, verifiedAt: null, requestCount: 0, updatedAt: new Date().toISOString(),
+      barrier: null, verifiedAt: null, requestCount: 0,
     };
     setPlaces((prev) => [...prev, newPlace]);
     persistPlace(newPlace);
@@ -540,16 +487,6 @@ export default function AccessAssistApp({ onSignOut }) {
         <div className="aa-bg-data-line line2" />
         <div className="aa-bg-scan" />
       </div>
-
-      <div className="aa-live-shine" aria-hidden="true">
-        <div className="aa-shine-orb aa-shine-orb-1" />
-        <div className="aa-shine-orb aa-shine-orb-2" />
-        <div className="aa-shine-orb aa-shine-orb-3" />
-        <div className="aa-shine-wave aa-shine-wave-1" />
-        <div className="aa-shine-wave aa-shine-wave-2" />
-        <div className="aa-shine-glass" />
-      </div>
-
       <style>{`
         @keyframes aa-pulse {
           0% { transform: scale(0.6); opacity: 0.45; }
@@ -572,7 +509,6 @@ export default function AccessAssistApp({ onSignOut }) {
         </div>
         <div className="aa-header-controls" style={styles.headerControls}>
           <div style={styles.dbBadge}>{dbStatus === "connected" ? "● Database connected" : "● Demo database"}</div>
-          <div className="aa-last-updated" title="Latest accessibility data update">🕒 <span>Last updated</span> <strong>{formatLastUpdated(lastUpdated)}</strong></div>
           <button style={styles.toggle} onClick={() => setProfileOpen(true)}>👤 Accessibility Hero</button>
           <ToggleButton label="Demo Fast-Forward" active={fastForward} onClick={() => setFastForward((v) => !v)} />
           <ToggleButton label="Voice-Guided Mode" active={voiceMode} onClick={() => setVoiceMode((v) => !v)} />
@@ -693,10 +629,9 @@ export default function AccessAssistApp({ onSignOut }) {
           place={selectedPlace}
           virtualNow={virtualNow}
           requirement={requirement}
-          onReportBarrier={openBarrierReport}
-          barrierIssues={selectedPlace ? getBarrierIssuesForPlace(selectedPlace) : []}
-          onToggleBarrierIssue={toggleBarrierIssue}
-          onFixBarrierIssue={fixOneBarrierIssue}
+          onReportBarrier={handleReportBarrier}
+          onResolveBarrier={handleResolveBarrier}
+          onConfirmBarrier={confirmBarrier}
           onRequestImprovement={requestImprovement}
           onVerifyPlace={handleVerifyPlace}
           onSpeak={handleSpeakerClick}
@@ -704,54 +639,10 @@ export default function AccessAssistApp({ onSignOut }) {
         </div>
       </div>
 
-      <button
-        className="aa-emergency-button aa-emergency-button-fixed"
-        style={{
-          position: "fixed",
-          left: "50%",
-          right: "auto",
-          bottom: 22,
-          width: "max-content",
-          maxWidth: "calc(100vw - 32px)",
-          height: 52,
-          minHeight: 52,
-          margin: 0,
-          padding: "0 26px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          transform: "translateX(-50%)",
-          zIndex: 999999,
-          borderRadius: 999,
-          background: "linear-gradient(135deg,#ff3f70,#d7265b)",
-          color: "#fff",
-          border: "1px solid rgba(255,255,255,.22)",
-          fontSize: 14,
-          fontWeight: 800,
-          lineHeight: 1,
-          whiteSpace: "nowrap",
-          boxSizing: "border-box",
-          boxShadow: "0 12px 35px rgba(239,71,111,.30),0 0 22px rgba(255,72,120,.12)",
-          cursor: "pointer"
-        }}
-        onClick={() => setEmergencyOpen(true)}
-      >
-        🚨 I Need Accessibility Now
-      </button>
+      <button className="aa-emergency-button" style={styles.emergencyButton} onClick={() => setEmergencyOpen(true)}>🚨 I Need Accessibility Now</button>
 
       {profileOpen && <ProfileModal contributor={contributor} onClose={() => setProfileOpen(false)} />}
       {emergencyOpen && <EmergencyModal places={places} onClose={() => setEmergencyOpen(false)} />}
-
-      {barrierReportOpen && selectedPlace && (
-        <BarrierReportModal
-          place={selectedPlace}
-          selectedIssues={getBarrierIssuesForPlace(selectedPlace)}
-          onToggle={toggleBarrierIssue}
-          onClose={() => setBarrierReportOpen(false)}
-          onDone={() => setBarrierReportOpen(false)}
-        />
-      )}
 
       {taggingOpen && (
         <TaggingModal
@@ -810,38 +701,11 @@ function OfflineControl({ state, progress, onStart }) {
   );
 }
 
-function SidePanel({ place, virtualNow, requirement, onReportBarrier, barrierIssues, onToggleBarrierIssue, onFixBarrierIssue, onRequestImprovement, onVerifyPlace, onSpeak }) {
+function SidePanel({ place, virtualNow, requirement, onReportBarrier, onResolveBarrier, onConfirmBarrier, onRequestImprovement, onVerifyPlace, onSpeak }) {
   if (!place) {
     return (
-      <aside style={{ ...styles.panel, position: "relative", overflow: "hidden" }}>
-        <div className="aa-empty-panel-visual" aria-hidden="true">
-          <div className="aa-empty-radar" />
-          <div className="aa-empty-orbit aa-empty-orbit-1">
-            <span>🌐</span>
-          </div>
-          <div className="aa-empty-orbit aa-empty-orbit-2">
-            <span>📍</span>
-          </div>
-          <div className="aa-empty-orbit aa-empty-orbit-3">
-            <span>🗺️</span>
-          </div>
-          <div className="aa-empty-float aa-empty-browser">
-            <span className="aa-mini-dot" /> WEB
-          </div>
-          <div className="aa-empty-float aa-empty-map">
-            <span className="aa-mini-dot" /> MAP
-          </div>
-          <div className="aa-empty-float aa-empty-access">
-            <span className="aa-mini-dot" /> ACCESS
-          </div>
-          <div className="aa-empty-crosshair">+</div>
-        </div>
-
-        <div className="aa-empty-panel-copy">
-          <div className="aa-empty-title">📍 Explore accessibility</div>
-          <div className="aa-empty-text">Tap a pin on the map to see its accessibility details.</div>
-          <div className="aa-empty-hint">Live map · Community data · Accessibility insights</div>
-        </div>
+      <aside style={styles.panel}>
+        <div style={styles.panelEmpty}>Tap a pin on the map to see its accessibility details.</div>
       </aside>
     );
   }
@@ -900,32 +764,23 @@ function SidePanel({ place, virtualNow, requirement, onReportBarrier, barrierIss
         })}
       </div>
 
-      {barrierIssues.length ? (
+      {place.barrier ? (
         <div style={styles.barrierBox}>
-          <div style={{ fontWeight: 700, color: COLORS.bad }}>⚠️ Reported barrier problems <span style={{ fontSize: 10, color: COLORS.mid, marginLeft: 6 }}>• pending report</span></div>
-          <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 5 }}>Fix only the problem that has actually been resolved.</div>
-          <div style={{ display: "grid", gap: 7, marginTop: 10 }}>
-            {barrierIssues.map((id) => {
-              const item = BARRIER_LIBRARY.find((x) => x.id === id);
-              if (!item) return null;
-              return (
-                <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 9px", borderRadius: 8, background: "rgba(239,91,124,0.08)", border: `1px solid ${COLORS.bad}55` }}>
-                  <span style={{ fontSize: 12, color: COLORS.text }}>{item.icon} {item.label}</span>
-                  <button style={styles.fixedButton} onClick={() => onFixBarrierIssue(id)}>Fix this</button>
-                </div>
-              );
-            })}
+          <div style={{ fontWeight: 600, color: COLORS.bad }}>⚠️ Barrier reported</div>
+          <div style={{ fontSize: 13, color: COLORS.textDim, marginTop: 4 }}>
+            Reported {Math.max(0, Math.floor((Date.now() - new Date(place.barrier.reportedAt).getTime()) / 3600000))} hours ago · Confirmed by {place.barrier.confirmations || 0} users
           </div>
-          <button style={{ ...styles.barrierButton, marginTop: 10 }} onClick={onReportBarrier}>Select / unselect barrier problems</button>
-          <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>These changes are manual for this website session and are not written to the database.</div>
+          <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 8 }}>Is this barrier still present?</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button style={styles.resolveButton} onClick={() => onConfirmBarrier(true)}>👍 Still blocked</button>
+            <button style={styles.fixedButton} onClick={() => onConfirmBarrier(false)}>👎 Fixed</button>
+          </div>
+          <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>Auto-clears in {formatCountdown(remaining)} if nobody confirms it.</div>
         </div>
       ) : (
-        <div>
-          <button style={styles.barrierButton} onClick={onReportBarrier}>
-            Report a Barrier
-          </button>
-          <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 7 }}>Choose the exact problem manually. Nothing is saved to the database.</div>
-        </div>
+        <button style={styles.barrierButton} onClick={onReportBarrier}>
+          Report a Barrier
+        </button>
       )}
 
       <div style={styles.requestBox}>
@@ -991,92 +846,6 @@ function EmergencyModal({ places, onClose }) {
   );
 }
 
-function BarrierReportModal({ place, selectedIssues, onToggle, onClose, onDone }) {
-  const reportRef = useRef(null);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    reportRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-
-  const selectedCount = selectedIssues.length;
-
-  return (
-    <div
-      className="aa-report-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="aa-report-title"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        className="aa-report-dialog"
-        ref={reportRef}
-        tabIndex={-1}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="aa-report-header">
-          <div>
-            <div className="aa-report-kicker">COMMUNITY REPORT</div>
-            <h3 id="aa-report-title">Report a Barrier</h3>
-            <p>Select only the problems you can actually see at <strong>{place.name}</strong>.</p>
-          </div>
-          <button className="aa-report-close" onClick={onClose} aria-label="Close barrier report">✕</button>
-        </div>
-
-        <div className="aa-report-principle">
-          <span className="aa-report-principle-icon">✓</span>
-          <div>
-            <strong>Report ≠ accessibility change</strong>
-            <div>Your report is shown as a local pending report. The accessibility score and tagged features stay unchanged until verification.</div>
-          </div>
-        </div>
-
-        <div className="aa-report-count">
-          <span>{selectedCount} problem{selectedCount === 1 ? "" : "s"} selected</span>
-          <span className="aa-report-local">This website only</span>
-        </div>
-
-        <div className="aa-report-options" role="group" aria-label="Barrier problems">
-          {BARRIER_LIBRARY.map((item) => {
-            const checked = selectedIssues.includes(item.id);
-            return (
-              <label key={item.id} className={`aa-report-option ${checked ? "is-selected" : ""}`}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => onToggle(item.id)}
-                />
-                <span className="aa-report-check" aria-hidden="true">{checked ? "✓" : ""}</span>
-                <span className="aa-report-option-icon">{item.icon}</span>
-                <span className="aa-report-option-text">{item.label}</span>
-              </label>
-            );
-          })}
-        </div>
-
-        <div className="aa-report-footer-note">
-          You can return later, unselect one problem, or use <strong>Fix this</strong> for only the problem that was resolved.
-          Nothing here writes barrier changes to the database.
-        </div>
-
-        <div className="aa-report-actions">
-          <button className="aa-report-clear" onClick={() => selectedCount && selectedIssues.forEach((id) => onToggle(id))} disabled={!selectedCount}>
-            Clear selection
-          </button>
-          <button className="aa-report-save" onClick={onDone}>
-            Done <span>→</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function TaggingModal({ draftFeatures, draftScore, onToggle, onCancel, onConfirm }) {
   const color = scoreColor(draftScore);
   return (
@@ -1129,8 +898,7 @@ const styles = {
     background: COLORS.bg,
     color: COLORS.text,
     width: "100%",
-    minHeight: "100vh",
-    height: "auto",
+    height: "100vh",
     display: "flex",
     flexDirection: "column",
   },
@@ -1299,17 +1067,6 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  fixedButton: {
-    padding: "6px 9px",
-    borderRadius: 7,
-    border: `1px solid ${COLORS.good}66`,
-    background: "rgba(61,220,151,.13)",
-    color: COLORS.good,
-    fontWeight: 700,
-    fontSize: 11,
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
   resolveButton: {
     marginTop: 10,
     width: "100%",
@@ -1327,13 +1084,9 @@ const styles = {
     inset: 0,
     background: "rgba(10,8,16,0.6)",
     display: "flex",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
     zIndex: 2000,
-    overflowY: "auto",
-    overflowX: "hidden",
-    padding: "24px 14px",
-    boxSizing: "border-box",
   },
   modal: {
     width: 360,
